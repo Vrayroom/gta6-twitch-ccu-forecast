@@ -24,8 +24,10 @@ run time).
 For a case with hour-1 print `p1`:
 
 - each donor is weighted by **size match**,
-  `w = exp(-|ln(h1) - ln(p1)| / 0.3)`, so donors whose first hour was about
-  as big as this case's count most;
+  `w = exp(-|ln(h1) - ln(p1)| / S(p1))`, so donors whose first hour was about
+  as big as this case's count most; the scale is 0.3 up to an hour-1 print
+  of 300k, then widens linearly in log `p1` to 1.0 at 1M, so a huge launch
+  is shaped by the whole donor pool instead of the two biggest donors;
 - donors whose unlock was a **rolling midnight local** (the class GTA VI
   belongs to) keep full weight; all others are downweighted to 0.25;
 - **live-service / free-to-play** launches are excluded outright (different
@@ -57,10 +59,11 @@ exactly):
 | **mean** | | **0.120** | **0.387** |
 
 The practice leaderboard's best entry was ≈ 0.169. The hyperparameters
-(size scale 0.3, non-midnight weight 0.25) were chosen on the practice mean
-**and** on a leave-one-donor-out check over the midnight-local donors
-(mean 0.240, median 0.145) — not on any single case. Adding extra spread
-or a 2.5× q95 cap made both worse, so neither is used.
+(base size scale 0.3, ramping to 1.0 above 300k, non-midnight weight 0.25)
+were chosen on the practice mean **and** on a leave-one-donor-out check
+over the midnight-local donors (mean 0.249, median 0.150) — not on any
+single case. Adding extra spread or a 2.5× q95 cap made both worse, so
+neither is used.
 
 Typical forecast shape for a large hour-1 print (e.g. 600k–1M): a dip to
 ~0.5–0.7× in hours 3–12, rising to a peak of ~0.9–1.3× in hours 19–22

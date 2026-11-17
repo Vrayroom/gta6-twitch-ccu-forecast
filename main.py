@@ -10,6 +10,10 @@ At run time, for a case with hour-1 print p1:
 
   * each donor is weighted by size match, w = exp(-|ln(h1) - ln(p1)| / 0.3),
     so donors whose first hour was about as big as this case's count most;
+    the scale widens adaptively above 300k (see size_scale): at S=0.3 the
+    pool collapses onto the two biggest donors once p1 is far above every
+    donor's hour-1, and both of those curves are flat for reasons that do
+    not apply to GTA VI (see the comment on SIZE_SCALE_MAX).
   * donors whose unlock was a rolling midnight local (the class GTA VI
     belongs to) keep full weight; all others are downweighted to 0.25;
   * live-service / free-to-play launches are excluded outright (different
@@ -33,6 +37,20 @@ leave-one-donor-out check over the midnight-local donors (mean 0.240,
 median 0.145), not on any single case: adding extra spread or a 2.5x cap
 made both worse, so neither is used.
 
+Adaptive scale (this variant): practice outputs are byte-identical to the
+submitted entry (all practice hour-1 prints are <= 270k < RAMP_LO), so the
+practice mean stays 0.120. LODO over the midnight-local donors moves
+0.240 -> 0.249 (mean) / 0.145 -> 0.150 (median), the cost concentrated in
+ELDEN RING and Cyberpunk 2077, the two flat giants. On a synthetic stress
+test whose truth is the 37-comparable median curve (0.73x at hour 4 rising
+to 2.40x at hour 19), loss at p1=1M improves 0.526 -> 0.239 (the house
+persistence fallback scores 0.234 on the same truth). The bet, priced: in
+the flat world (truth = ELDEN RING's own curve at p1=1M) the variant
+scores 0.099 vs 0.028 for the submitted model; in the rising world it
+gains ~0.29. A console-only rolling-midnight launch with an estimated
+1.5-2.5M peak is prior-weighted toward the rising world, which is why the
+variant is adopted.
+
 Input: every <id>.in in $MAKEFUN_INPUT_DIR (else /input), schema
 makefun/twitch-ccu-case/v1. Output: <id>.out in $MAKEFUN_OUTPUT_DIR
 (else /output): {"hours": [{"hour": 2, "q": [q05,q25,q50,q75,q95]}, ...]}.
@@ -53,6 +71,29 @@ OUTPUT_DIR = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
 LEVELS = [0.05, 0.25, 0.5, 0.75, 0.95]
 # Size-match scale (log units) and downweight for non-midnight-local donors.
 SIZE_SCALE = 0.3
+# Adaptive scale: at S=0.3 the pool collapses onto the two biggest donors
+# (ELDEN RING + Cyberpunk 2077, effective sample size ~2.4) once p1 is far
+# above every donor's hour-1, and both of those curves are flat for reasons
+# that do not apply to GTA VI (a simultaneous PC global unlock / a PC
+# audience that unlocked before the scored day; GTA VI is console-only and
+# unlocks on the rolling midnight schedule). Above RAMP_LO the scale widens
+# linearly in log p1 to SIZE_SCALE_MAX at RAMP_HI, so a huge launch is
+# shaped by the whole donor pool instead of two flat templates. Practice
+# hour-1 prints are all <= 270k < RAMP_LO, so practice is untouched.
+SIZE_SCALE_MAX = 1.0
+RAMP_LO = 300_000
+RAMP_HI = 1_000_000
+
+
+def size_scale(p1):
+    """Size-match scale at hour-1 print p1: SIZE_SCALE up to RAMP_LO, then a
+    ramp linear in log p1 up to SIZE_SCALE_MAX at RAMP_HI, flat thereafter."""
+    if p1 <= RAMP_LO:
+        return SIZE_SCALE
+    if p1 >= RAMP_HI:
+        return SIZE_SCALE_MAX
+    f = (math.log(p1) - math.log(RAMP_LO)) / (math.log(RAMP_HI) - math.log(RAMP_LO))
+    return SIZE_SCALE + (SIZE_SCALE_MAX - SIZE_SCALE) * f
 CLASS_B = 0.25
 # Guards, as fractions of the hour-1 print.
 Q05_FLOOR = 0.20
@@ -141,6 +182,7 @@ def hour1_print(case):
 def forecast_case(case):
     p1 = hour1_print(case)
     log_p1 = math.log(p1)
+    S = size_scale(p1)
     pool = []
     for name, h1, midnight, live, ratios in DONORS:
         if live or h1 < 5000:
@@ -148,7 +190,7 @@ def forecast_case(case):
             # (their category was nearly empty at midnight UTC) and carry
             # no signal about a big launch.
             continue
-        w = math.exp(-abs(math.log(h1) - log_p1) / SIZE_SCALE)
+        w = math.exp(-abs(math.log(h1) - log_p1) / S)
         if not midnight:
             w *= CLASS_B
         pool.append((ratios, w))
