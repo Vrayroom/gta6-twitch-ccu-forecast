@@ -143,7 +143,10 @@ def forecast_case(case):
     log_p1 = math.log(p1)
     pool = []
     for name, h1, midnight, live, ratios in DONORS:
-        if live:
+        if live or h1 < 5000:
+            # live-service/F2P excluded; tiny hour-1 donors' ratios explode
+            # (their category was nearly empty at midnight UTC) and carry
+            # no signal about a big launch.
             continue
         w = math.exp(-abs(math.log(h1) - log_p1) / SIZE_SCALE)
         if not midnight:
@@ -165,15 +168,23 @@ def forecast_case(case):
         qs[4] = min(qs[4], Q95_CAP * p1)
         qs.sort()
         hours.append({"hour": h, "q": [round2(q) for q in qs]})
+    if sorted(r["hour"] for r in hours) != list(range(2, 25)):
+        # Truncated or duplicate forecast rows would emit an invalid file;
+        # fail over to the fallback instead of shipping it.
+        raise ValueError("incomplete forecast rows")
     return {"hours": hours}
 
 
 def fallback_case(case):
-    """House persistence forecast (starter), used only if the donor model fails."""
+    """House persistence forecast (starter), used only if the donor model fails.
+
+    Deliberately independent of case["forecast"]: it builds hours 2..24
+    itself, so a case whose forecast rows are missing or malformed still
+    gets a valid output file instead of crashing the run.
+    """
     p1 = hour1_print(case)
     hours = []
-    for row in case["forecast"]:
-        h = row["hour"]
+    for h in range(2, 25):
         qs = [round2(p1 * math.exp(z * FALLBACK_SIGMA * math.sqrt(h - 1))) for z in Z]
         hours.append({"hour": h, "q": qs})
     return {"hours": hours}
@@ -186,7 +197,14 @@ def main():
         try:
             forecast = forecast_case(case)
         except Exception:
-            forecast = fallback_case(case)
+            try:
+                forecast = fallback_case(case)
+            except Exception:
+                # Last resort: a flat persistence file beats no file at all.
+                # hour1_print never raises, so p1 is always defined here.
+                p1 = hour1_print(case)
+                forecast = {"hours": [{"hour": h, "q": [round2(p1)] * 5}
+                            for h in range(2, 25)]}
         (OUTPUT_DIR / f"{path.stem}.out").write_text(
             json.dumps(forecast, separators=(",", ":")) + "\n", encoding="utf-8"
         )
