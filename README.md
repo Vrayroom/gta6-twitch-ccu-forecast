@@ -1,10 +1,13 @@
 # GTA VI launch-day Twitch forecast
 
+[![make.fun · gta6-twitch-ccu-forecast-01](https://make.fun/badge/gta6-twitch-ccu-forecast-01.svg)](https://make.fun/bounty/gta6-twitch-ccu-forecast-01)
+[![rank](https://make.fun/badge/gta6-twitch-ccu-forecast-01/Vrayroom/gta6-twitch-ccu-forecast/rank.svg)](https://make.fun/bounty/gta6-twitch-ccu-forecast-01/leaderboard)
+[![reward](https://make.fun/badge/gta6-twitch-ccu-forecast-01/Vrayroom/gta6-twitch-ccu-forecast/reward.svg)](https://make.fun/bounty/gta6-twitch-ccu-forecast-01)
+
 Entry for [make.fun bounty `gta6-twitch-ccu-forecast-01`](https://make.fun/bounty/gta6-twitch-ccu-forecast-01):
 forecast Grand Theft Auto VI's Twitch concurrent viewers for each hour of its
 release day, 2026-11-19 (UTC), hours 2–24, as five quantiles per hour.
 
-> **Placeholders — fill in when the repository is created:**
 > GitHub owner: `Vrayroom` · Repository: `gta6-twitch-ccu-forecast` · Entry repo URL:
 > `https://github.com/Vrayroom/gta6-twitch-ccu-forecast`
 
