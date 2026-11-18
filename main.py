@@ -51,6 +51,17 @@ gains ~0.29. A console-only rolling-midnight launch with an estimated
 1.5-2.5M peak is prior-weighted toward the rising world, which is why the
 variant is adopted.
 
+v3b (this file): the h2-h5 band is lifted by LIFT_LOG log units, but only
+when the hour-1 print is at least LIFT_GATE = 1,000,000. The Nov 18
+evening measurement showed Twitch sustaining ~2.5-3.3M viewers for 6+
+hours after the New Zealand unlock with the US asleep (flat, not decaying),
+and hours 2-5 of the scored day carry drivers no donor had (Kai Cenat
+marathon from 01:00 UTC, IShowSpeed from 02:00 UTC, Ludwig non-stop with
+an hourly code, US prime evening, daily code raffle from Nov 19). The
+lift is a judgement bet on that flat world, priced on synthetic flat and
+median truths; it is practice-neutral by construction (all practice hour-1
+prints are <= 270k < LIFT_GATE). See VALIDATION-v3b.md.
+
 Input: every <id>.in in $MAKEFUN_INPUT_DIR (else /input), schema
 makefun/twitch-ccu-case/v1. Output: <id>.out in $MAKEFUN_OUTPUT_DIR
 (else /output): {"hours": [{"hour": 2, "q": [q05,q25,q50,q75,q95]}, ...]}.
@@ -83,6 +94,9 @@ SIZE_SCALE = 0.3
 SIZE_SCALE_MAX = 1.0
 RAMP_LO = 300_000
 RAMP_HI = 1_000_000
+# v3b: hours 2-5 lift, gated to huge hour-1 prints (see forecast_case).
+LIFT_GATE = 1_000_000
+LIFT_LOG = 0.10
 
 
 def size_scale(p1):
@@ -206,6 +220,16 @@ def forecast_case(case):
         for tau in LEVELS:
             qs.append(p1 * math.exp(wquantile(pairs, tau)))
         qs.sort()
+        if 2 <= h <= 5 and p1 >= LIFT_GATE:
+            # v3b: hours 2-5 only, mega launches only (p1 >= 1M). Practice
+            # hour-1 prints are <= 270k, so practice is byte-identical to
+            # v2. The lift is uniform in log-ratio terms across all five
+            # quantiles: it raises the whole h2-h5 band without changing
+            # its shape or spread. Guards below are unaffected (the lift
+            # only raises quantiles; the q05 floor and q95 cap never bind
+            # near ratios of ~1x).
+            lift = math.exp(LIFT_LOG)
+            qs = [q * lift for q in qs]
         qs[0] = max(qs[0], Q05_FLOOR * p1)
         qs[4] = min(qs[4], Q95_CAP * p1)
         qs.sort()

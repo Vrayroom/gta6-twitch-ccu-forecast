@@ -89,3 +89,17 @@ persistence forecast so the output is always a valid file.
   standard library only.
 - `LICENSE` — MIT.
 - `.makefun/owner.json` — payout wallet for the prize claim.
+
+## v3b (this variant, +0.10 log lift)
+
+On top of v2: the h2–h5 forecast band is lifted by 0.10 log units, but
+only when the hour-1 print is at least 1,000,000 viewers. The Nov 18
+evening measurement showed Twitch sustaining ~2.5–3.3M viewers for 6+
+hours after the New Zealand unlock with the US asleep (flat, not
+decaying), and hours 2–5 of the scored day carry drivers no donor had
+(Kai Cenat marathon from 01:00 UTC, IShowSpeed from 02:00 UTC, Ludwig
+non-stop with an hourly code, US prime evening, daily code raffle from
+Nov 19). Practice is byte-identical to v2 (all practice hour-1 prints
+are ≤ 270k < 1M), mean pinball 0.120228. Priced on synthetic truths at
+p1 = 1–3M: flat world 0.1071 vs v2's 0.1160, median world 0.2412 vs
+0.2394; 50/50 expected value 0.1741 vs 0.1777. See VALIDATION-v3b.md.
